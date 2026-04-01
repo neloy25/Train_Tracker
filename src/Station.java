@@ -8,5 +8,6 @@ public class Station {
         this.arrivalTime=arrivalTime;
         this.stationName=stationName;
         this.reverseArrivalTime= reverseArrivalTime;
+        this.waitTime=waitTime;
     }
 }

@@ -1,4 +1,5 @@
 import java.util.ArrayList;
+import java.util.stream.Stream;
 
 public class Train {
     private String trainName ;
@@ -6,34 +7,26 @@ public class Train {
     private String startStaion;
     private  String destination;
     private  String nextStaion;
-    private  String arrivalTime;
-    private  String  departureTime;
+
     private  int delayTime;
     ArrayList<Station> stations;
 
 
     public  Train(int trainNumber,String trainName,String startStaion,String destination,
-                  ArrayList<Station>station )
+                  ArrayList<Station>stations )
     {
 
+     this.trainName=trainName;
+     this.trainNumber=trainNumber;
+
+     this.startStaion = startStaion;
+     this.destination=destination;
+
+     this.delayTime=delayTime;
+     this.stations=stations;
 
     }
 
-//    @Override
-//    public String getarrivalTime()
-//    {
-//        return  arrivalTime;
-//    }
-//
-//    @Override
-//    public String getDepartureTime() {
-//        return departureTime;
-//    }
-//
-//    @Override
-//    public int getdelay() {
-//        return delayTime;
-//    }
 
 
 
