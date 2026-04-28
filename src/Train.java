@@ -48,10 +48,8 @@ public class Train {
         String[] stationList = stationStr.split(";");
 
         ArrayList<Station> stations = new ArrayList<>();
-
         for (String s : stationList) {
             String[] p = s.split("\\|");
-
             stations.add(new Station(
                     p[0], p[1], p[2], p[3], p[4],
                     p[5], Integer.parseInt(p[6])
@@ -66,148 +64,193 @@ public class Train {
                 reverseEndTime, stations, offDays);
     }
 
-    public void trackTrain(String currTime) {
-        for (int i = 0; i < stations.size(); i++) {
+    public TrackResult trackTrain() {
+        String localTime = TimeData.getTime();
+
+        if (!Calculate.compareTime(localTime, startTime) &&
+                Calculate.compareTime(localTime, endTime)) {
+
+            TrackResult res = forwardTrack();
+            res.isForward = true;
+            return res;
+        }
+
+        else if (!Calculate.compareTime(localTime, reverseStartTime) &&
+                Calculate.compareTime(localTime, reverseEndTime)) {
+
+            TrackResult res = reverseTrack();
+            res.isForward = false;
+            return res;
+        }
+
+        else if (!Calculate.compareTime(localTime, endTime) &&
+                Calculate.compareTime(localTime, reverseStartTime)) {
+
+            TrackResult res = new TrackResult();
+            res.status = "Train is at " + endStation;
+            res.nextStation = endStation;
+            res.isForward = false; // about to go reverse
+            return res;
+        }
+
+        else {
+            TrackResult res = new TrackResult();
+            res.status = "Train is at " + startStation;
+            res.nextStation = startStation;
+            res.isForward = true; // about to go forward
+            return res;
+        }
+    }
+
+    public TrackResult forwardTrack() {
+        TrackResult res = new TrackResult();
+        res.isForward = true;
+        String localTime = TimeData.getTime();
+
+        int n = stations.size();
+
+        Station first = stations.get(0);
+        if (Calculate.compareTime(localTime, first.getDepartureTime())) {
+            res.status = "Train is at " + first.getName();
+            res.nextStation = first.getName();
+            return res;
+        }
+        res.stationsPassed++;
+        Station prev = first;
+
+        for (int i = 1; i < n - 1; i++) {
             Station s = stations.get(i);
-            String arr = s.getArrivalTime();
-            String dep = s.getDepartureTime();
 
-            // Start station
-            if (i == 0) {
-                if (Calculate.compareTime(currTime, dep)) {
-                    System.out.println("Train will leave " + s.getName());
-                    return;
-                } else {
-                    System.out.println("Train has left " + s.getName());
-                    continue;
-                }
+            if (Calculate.compareTime(localTime, s.getArrivalTime())) {
+                res.status = "Train will reach " + s.getName();
+                res.nextStation = s.getName();
+                res.distance += Calculate.calcDistance(prev.getNextStationDistance(), prev.getDepartureTime(), localTime, s.getArrivalTime());
+                return res;
             }
-
-            // End station
-            if (i == stations.size() - 1) {
-                if (Calculate.compareTime(currTime, arr)) {
-                    System.out.println("Train will reach " + s.getName());
-                } else {
-                    System.out.println("Train is at " + s.getName());
-                }
-                return;
+            else if (Calculate.compareTime(localTime, s.getDepartureTime())) {
+                res.status = "Train is at " + s.getName();
+                res.nextStation = s.getName();
+                res.distance += prev.getNextStationDistance();
+                return res;
             }
-
-            // Middle station
-            if (Calculate.compareTime(currTime, arr)) {
-                System.out.println("Train will reach " + s.getName());
-                return;
-            }
-            if (Calculate.compareTime(currTime, dep)) {
-                System.out.println("Train is at " + s.getName());
-                return;
-            }
-            System.out.println("Train has left " + s.getName());
+            res.distance += prev.getNextStationDistance();
+            prev = s;
+            res.stationsPassed++;
         }
-    }
 
-    public void reverseTrackTrain(String currTime) {
-        for (int i = 0; i < reverseStations.size(); i++) {
-            Station s = reverseStations.get(i);
-            String arr = s.getReverseArrivalTime();
-            String dep = s.getReverseDepartureTime();
+        Station last = stations.get(n - 1);
 
-            // Start station
-            if (i == 0) {
-                if (Calculate.compareTime(currTime, dep)) {
-                    System.out.println("Train will leave " + s.getName());
-                    return;
-                } else {
-                    System.out.println("Train has left " + s.getName());
-                    continue;
-                }
-            }
-
-            // End station
-            if (i == reverseStations.size() - 1) {
-                if (Calculate.compareTime(currTime, arr)) {
-                    System.out.println("Train will reach " + s.getName());
-                } else {
-                    System.out.println("Train is at " + s.getName());
-                }
-                return;
-            }
-
-            // Middle station
-            if (Calculate.compareTime(currTime, arr)) {
-                System.out.println("Train will reach " + s.getName());
-                return;
-            }
-            if (Calculate.compareTime(currTime, dep)) {
-                System.out.println("Train is at " + s.getName());
-                return;
-            }
-            System.out.println("Train has left " + s.getName());
-        }
-    }
-
-    public boolean track(String currTime) {
-        if (!Calculate.compareTime(currTime, startTime)
-                && Calculate.compareTime(currTime, endTime)) {
-
-            trackTrain(currTime);
-            return true;
-
-        } else if (!Calculate.compareTime(currTime, reverseStartTime)
-                && Calculate.compareTime(currTime, reverseEndTime)) {
-
-            reverseTrackTrain(currTime);
-            return false;
-
+        if (Calculate.compareTime(localTime, last.getArrivalTime())) {
+            res.status = "Train will reach " + last.getName();
+            res.nextStation = last.getName();
+            res.distance += Calculate.calcDistance(prev.getNextStationDistance(), prev.getDepartureTime(), localTime, last.getArrivalTime());
         } else {
-            if (Calculate.compareTime(currTime, startTime)) {
-                System.out.println("Train is at " + startStation);
-                return true;
-            } else {
-                System.out.println("Train is at " + endStation);
-                return false;
-            }
+            res.distance += prev.getNextStationDistance();
+            res.status = "Train has reached " + last.getName();
+            res.nextStation = last.getName();
+            res.stationsPassed++;
         }
-    }
-    // getters
-    public int getNumber() {
-        return number;
+        return res;
     }
 
-    public String getName() {
-        return name;
+    public TrackResult reverseTrack() {
+        TrackResult res = new TrackResult();
+        res.isForward = false;
+
+        String localTime = TimeData.getTime();
+        int n = reverseStations.size();
+
+        Station first = reverseStations.get(0);
+
+        if (Calculate.compareTime(localTime, first.getReverseDepartureTime())) {
+            res.status = "Train is at " + first.getName();
+            res.nextStation = first.getName();
+            return res;
+        }
+
+        res.stationsPassed++;
+        Station prev = first;
+
+        for (int i = 1; i < n - 1; i++) {
+            Station curr = reverseStations.get(i);
+
+            if (Calculate.compareTime(localTime, curr.getReverseArrivalTime())) {
+                res.status = "Train will reach " + curr.getName();
+                res.nextStation = curr.getName();
+
+                // FIX: Use curr.getNextStationDistance() for reverse leg distance
+                res.distance += Calculate.calcDistance(
+                        curr.getNextStationDistance(),
+                        prev.getReverseDepartureTime(),
+                        localTime,
+                        curr.getReverseArrivalTime()
+                );
+                return res;
+            }
+
+            if (Calculate.compareTime(localTime, curr.getReverseDepartureTime())) {
+                res.status = "Train is at " + curr.getName();
+                res.nextStation = curr.getName();
+
+                // FIX: Use curr.getNextStationDistance()
+                res.distance += curr.getNextStationDistance();
+                return res;
+            }
+
+            // FIX: Use curr.getNextStationDistance()
+            res.distance += curr.getNextStationDistance();
+            prev = curr;
+            res.stationsPassed++;
+        }
+
+        Station last = reverseStations.get(n - 1);
+
+        if (Calculate.compareTime(localTime, last.getReverseArrivalTime())) {
+            res.status = "Train will reach " + last.getName();
+            res.nextStation = last.getName();
+
+            // FIX: Use last.getNextStationDistance()
+            res.distance += Calculate.calcDistance(
+                    last.getNextStationDistance(),
+                    prev.getReverseDepartureTime(),
+                    localTime,
+                    last.getReverseArrivalTime()
+            );
+        } else {
+            // FIX: Use last.getNextStationDistance()
+            res.distance += last.getNextStationDistance();
+            res.status = "Train has reached " + last.getName();
+            res.nextStation = last.getName();
+            res.stationsPassed++;
+        }
+
+        return res;
     }
 
-    public String getStartStation() {
-        return startStation;
+    @Override
+    public String toString() {
+        return number + " - " + name;
     }
 
-    public String getStartTime() {
-        return startTime;
+    public int getTotalDistance() {
+        int sum = 0;
+        for (Station s : stations) {
+            sum += s.getNextStationDistance();
+        }
+        return sum;
     }
 
-    public String getReverseStartTime() {
-        return reverseStartTime;
-    }
-
-    public String getEndStation() {
-        return endStation;
-    }
-
-    public String getEndTime() {
-        return endTime;
-    }
-
-    public String getReverseEndTime() {
-        return reverseEndTime;
-    }
-
-    public ArrayList<Station> getStations() {
-        return stations;
-    }
-
-    public ArrayList<String> getOffDays() {
-        return offDays;
-    }
-
+    // =====================
+    // GETTERS
+    // =====================
+    public int getNumber() { return number; }
+    public String getName() { return name; }
+    public String getStartStation() { return startStation; }
+    public String getStartTime() { return startTime; }
+    public String getReverseStartTime() { return reverseStartTime; }
+    public String getEndStation() { return endStation; }
+    public String getEndTime() { return endTime; }
+    public String getReverseEndTime() { return reverseEndTime; }
+    public ArrayList<Station> getStations() { return stations; }
+    public ArrayList<String> getOffDays() { return offDays; }
 }

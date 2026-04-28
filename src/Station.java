@@ -18,8 +18,6 @@ public class Station {
         this.nextStationDistance = nextStationDistance;
     }
 
-
-
     //getters
 
     public String getName() {
